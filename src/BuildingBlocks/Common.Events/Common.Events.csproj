@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Common.Events</RootNamespace>
+    <AssemblyName>Common.Events</AssemblyName>
+    <Description>Shared event contracts for POS-WMS integration</Description>
+  </PropertyGroup>
+</Project>

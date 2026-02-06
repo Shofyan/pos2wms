@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>POS.Domain</RootNamespace>
+    <AssemblyName>POS.Domain</AssemblyName>
+    <Description>POS Domain Layer - Entities, Value Objects, Domain Events</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Common.PostgreSQL\Common.PostgreSQL.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,140 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: pos-wms-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pos-wms-network
+
+  # Apache Kafka (using Bitnami image)
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: pos-wms-kafka
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_LOG_RETENTION_HOURS=168
+      - KAFKA_CFG_LOG_SEGMENT_BYTES=1073741824
+    ports:
+      - "9094:9094"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - pos-wms-network
+
+  # Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: pos-wms-kafka-ui
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    ports:
+      - "8090:8080"
+    depends_on:
+      - kafka
+    networks:
+      - pos-wms-network
+
+  # Seq (Structured Logging)
+  seq:
+    image: datalust/seq:latest
+    container_name: pos-wms-seq
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - pos-wms-network
+
+  # POS API
+  pos-api:
+    build:
+      context: .
+      dockerfile: src/Services/POS/POS.API/Dockerfile
+    container_name: pos-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__PosDatabase=Host=postgres;Port=5432;Database=pos_db;Username=postgres;Password=postgres
+      - Kafka__BootstrapServers=kafka:9092
+      - Seq__ServerUrl=http://seq:80
+    ports:
+      - "5001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - pos-wms-network
+
+  # WMS Consumer
+  wms-consumer:
+    build:
+      context: .
+      dockerfile: src/Services/WMS/WMS.Consumer/Dockerfile
+    container_name: wms-consumer
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__WmsDatabase=Host=postgres;Port=5432;Database=wms_db;Username=postgres;Password=postgres
+      - Kafka__BootstrapServers=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - pos-wms-network
+
+  # Web UI
+  web-ui:
+    build:
+      context: ./src/WebUI
+      dockerfile: Dockerfile
+    container_name: pos-wms-webui
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:5001/api/v1
+    depends_on:
+      - pos-api
+    networks:
+      - pos-wms-network
+
+volumes:
+  postgres_data:
+  kafka_data:
+  seq_data:
+
+networks:
+  pos-wms-network:
+    driver: bridge
