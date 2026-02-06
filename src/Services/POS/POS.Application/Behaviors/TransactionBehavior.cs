@@ -44,9 +44,23 @@ public sealed class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior
             var result = await next();
             return result;
         }, cancellationToken);
+        try
+        {
+            var response = await _unitOfWork.ExecuteTransactionalAsync(async () =>
+            {
+                _logger.LogDebug("Started transaction for {RequestName}", requestName);
+                return await next();
+            }, cancellationToken);
 
         _logger.LogDebug("Committed transaction for {RequestName}", requestName);
 
         return response;
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in transaction for {RequestName}", requestName);
+            throw;
+        }
     }
 }

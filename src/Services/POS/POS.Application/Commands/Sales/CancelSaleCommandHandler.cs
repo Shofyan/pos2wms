@@ -38,7 +38,6 @@ public sealed class CancelSaleCommandHandler : IRequestHandler<CancelSaleCommand
         sale.Cancel(request.Reason, request.AuthorizedBy);
 
         _saleRepository.Update(sale);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Sale {SaleId} cancelled. Was completed: {WasCompleted}",

@@ -62,7 +62,6 @@ public sealed class CreateReturnCommandHandler : IRequestHandler<CreateReturnCom
         returnEntity.Process();
 
         await _returnRepository.AddAsync(returnEntity, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Return created with ID {ReturnId}, number {ReturnNumber}. Refund: {RefundAmount}",

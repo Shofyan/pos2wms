@@ -46,7 +46,6 @@ public sealed class CompleteSaleCommandHandler : IRequestHandler<CompleteSaleCom
         sale.Complete();
 
         _saleRepository.Update(sale);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Sale {SaleId} completed. Total: {Total}, Paid: {Paid}, Change: {Change}",

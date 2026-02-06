@@ -53,7 +53,6 @@ public sealed class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand
         }
 
         await _saleRepository.AddAsync(sale, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Sale created with ID {SaleId}, transaction {TransactionNumber}",
