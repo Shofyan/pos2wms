@@ -120,9 +120,90 @@ PosWmsIntegration/
 
 ### Running with Docker
 
+The easiest way to run the entire system is using Docker Compose. This will spin up the POS API, WMS Consumer, Web UI, and all required infrastructure (PostgreSQL, Kafka, Seq).
+
+1. **Build and start all services**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+2. **Wait for services to be healthy**
+   The services have health checks configured. You can check the status with:
+   ```bash
+   docker-compose ps
+   ```
+
+3. **Access the services**
+   - **Web UI**: [http://localhost:3000](http://localhost:3000)
+   - **POS API (Swagger)**: [http://localhost:5001](http://localhost:5001)
+   - **Kafka UI**: [http://localhost:8090](http://localhost:8090)
+   - **Seq (Logs)**: [http://localhost:5341](http://localhost:5341)
+
+---
+
+## 🧪 Testing the Integration
+
+To verify that the POS and WMS services are correctly integrated via Kafka, follow these steps:
+
+### 1. Check Initial Inventory (Optional)
+You can check the WMS logs or database to see current inventory levels for a specific SKU (e.g., `SKU-12345`).
+
+### 2. Create a New Sale
+Create a sale in the POS service. This will create a sale in `Draft` status.
+
 ```bash
-docker-compose up -d
+curl -X POST http://localhost:5001/api/v1/sales \
+  -H "Content-Type: application/json" \
+  -d '{
+    "storeId": "STORE001",
+    "terminalId": "TERM001",
+    "cashierId": "CASH001",
+    "items": [
+      {
+        "sku": "SKU-12345",
+        "productName": "Integration Test Product",
+        "quantity": 5,
+        "unitPrice": 10000,
+        "taxRate": 0.11
+      }
+    ]
+  }'
 ```
+*Take note of the `saleId` from the response.*
+
+### 3. Complete the Sale
+Completing a sale publishes a `SaleCompletedEvent` to Kafka, which the WMS service consumes to update inventory.
+
+```bash
+# Replace {id} with the saleId from the previous step
+curl -X POST http://localhost:5001/api/v1/sales/{id}/complete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payments": [
+      {
+        "paymentMethod": "cash",
+        "amount": 55500
+      }
+    ]
+  }'
+```
+
+### 4. Verify Integration Results
+
+- **Check WMS Consumer Logs**:
+  View the logs to see the event being processed:
+  ```bash
+  docker-compose logs -f wms-consumer
+  ```
+  You should see logs indicating that `SaleCompletedEvent` was received and inventory was updated for `SKU-12345`.
+
+- **Check Seq**:
+  Navigate to [http://localhost:5341](http://localhost:5341) and search for `SaleCompletedEvent`. You can trace the event from POS publication to WMS consumption using the `CorrelationId`.
+
+- **Check Kafka UI**:
+  Navigate to [http://localhost:8090](http://localhost:8090) to see the message in the `pos.sales.events` topic (or the configured topic name).
+
+---
 
 ## 📝 API Examples
 

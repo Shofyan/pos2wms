@@ -33,8 +33,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Create non-root user
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
-USER appuser
+# Use built-in non-root user
+USER app
 
 ENTRYPOINT ["dotnet", "POS.API.dll"]

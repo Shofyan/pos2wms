@@ -5,6 +5,7 @@ using WMS.Consumer.Handlers;
 using WMS.Consumer.Workers;
 using WMS.Domain.Services;
 using WMS.Infrastructure;
+using WMS.Infrastructure.Data;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -42,6 +43,10 @@ using (var scope = host.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<WMS.Infrastructure.Data.WmsDbContext>();
     await context.Database.MigrateAsync();
+    
+    // Seed data
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<WmsDbContext>>();
+    await WmsDbInitializer.SeedAsync(context, logger);
 }
 
 Log.Information("Starting WMS Consumer Worker...");

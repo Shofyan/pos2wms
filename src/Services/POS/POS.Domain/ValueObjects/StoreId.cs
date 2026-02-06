@@ -3,14 +3,9 @@ namespace POS.Domain.ValueObjects;
 /// <summary>
 /// Value object representing a Store identifier
 /// </summary>
-public sealed record StoreId
+public sealed record StoreId(string Value)
 {
-    public string Value { get; }
-
-    private StoreId(string value)
-    {
-        Value = value;
-    }
+    private StoreId() : this(string.Empty) { } // EF Core
 
     public static StoreId Create(string value)
     {
@@ -33,14 +28,9 @@ public sealed record StoreId
 /// <summary>
 /// Value object representing a Terminal identifier
 /// </summary>
-public sealed record TerminalId
+public sealed record TerminalId(string Value)
 {
-    public string Value { get; }
-
-    private TerminalId(string value)
-    {
-        Value = value;
-    }
+    private TerminalId() : this(string.Empty) { } // EF Core
 
     public static TerminalId Create(string value)
     {

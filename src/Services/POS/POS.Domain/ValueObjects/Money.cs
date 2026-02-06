@@ -14,6 +14,8 @@ public sealed record Money
         Currency = currency;
     }
 
+    private Money(decimal amount) : this(amount, "IDR") { }
+
     public static Money Create(decimal amount, string currency)
     {
         if (string.IsNullOrWhiteSpace(currency))

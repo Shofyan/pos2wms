@@ -5,14 +5,9 @@ namespace POS.Domain.ValueObjects;
 /// <summary>
 /// Value object representing a Stock Keeping Unit (SKU)
 /// </summary>
-public sealed partial record SKU
+public sealed partial record SKU(string Value)
 {
-    public string Value { get; }
-
-    private SKU(string value)
-    {
-        Value = value;
-    }
+    private SKU() : this(string.Empty) { } // EF Core
 
     public static SKU Create(string value)
     {
