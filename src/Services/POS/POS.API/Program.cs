@@ -1,9 +1,11 @@
 using Common.Kafka;
 using Common.Resilience;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using POS.API.Middleware;
 using POS.Application;
 using POS.Infrastructure;
+using POS.Infrastructure.Data;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,6 +92,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+// Apply migrations
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<PosDbContext>();
+    await context.Database.MigrateAsync();
+}
 
 // Log startup
 Log.Information("Starting POS API...");

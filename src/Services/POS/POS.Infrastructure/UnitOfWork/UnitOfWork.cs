@@ -1,4 +1,5 @@
 using Common.PostgreSQL.UnitOfWork;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using POS.Infrastructure.Data;
 
@@ -70,6 +71,29 @@ public sealed class UnitOfWork : IUnitOfWork
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async ct =>
+        {
+            await BeginTransactionAsync(ct);
+            try
+            {
+                var result = await operation(ct);
+                await CommitAsync(ct);
+                return result;
+            }
+            catch
+            {
+                await RollbackAsync(ct);
+                throw;
+            }
+        }, cancellationToken);
     }
 
     public async ValueTask DisposeAsync()

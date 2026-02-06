@@ -29,4 +29,11 @@ public interface IUnitOfWork : IAsyncDisposable
     /// Whether there is an active transaction
     /// </summary>
     bool HasActiveTransaction { get; }
+
+    /// <summary>
+    /// Execute an operation within a transaction using the execution strategy
+    /// </summary>
+    Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default);
 }

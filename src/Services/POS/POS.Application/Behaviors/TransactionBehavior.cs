@@ -37,27 +37,16 @@ public sealed class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior
             return await next();
         }
 
-        try
+        _logger.LogDebug("Starting transaction for {RequestName}", requestName);
+
+        var response = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            await _unitOfWork.BeginTransactionAsync(cancellationToken);
+            var result = await next();
+            return result;
+        }, cancellationToken);
 
-            _logger.LogDebug("Started transaction for {RequestName}", requestName);
+        _logger.LogDebug("Committed transaction for {RequestName}", requestName);
 
-            var response = await next();
-
-            await _unitOfWork.CommitAsync(cancellationToken);
-
-            _logger.LogDebug("Committed transaction for {RequestName}", requestName);
-
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in transaction for {RequestName}, rolling back", requestName);
-
-            await _unitOfWork.RollbackAsync(cancellationToken);
-
-            throw;
-        }
+        return response;
     }
 }
